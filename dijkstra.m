@@ -1,3 +1,4 @@
+% Used by shortest path function
 function [shortestPath, totalCost] = dijkstra(netCostMatrix, s, d)
 %==============================================================
 % shortestPath: the list of nodes in the shortestPath from source to destination;
@@ -6,12 +7,6 @@ function [shortestPath, totalCost] = dijkstra(netCostMatrix, s, d)
 % n: the number of nodes in the network;
 % s: source node index;
 % d: destination node index;
-%==============================================================
-%  Code by:
-% ++by Xiaodong Wang
-% ++23 Jul 2004 (Updated 29 Jul 2004)
-% ++http://www.mathworks.com/matlabcentral/fileexchange/5550-dijkstra-shortest-path-routing
-% Modifications (simplifications) by Meral Shirazipour 9 Dec 2009
 %==============================================================
 n = size(netCostMatrix,1);
 for i = 1:n
