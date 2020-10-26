@@ -6,6 +6,7 @@ function [shortestPaths, totalCosts] = kShortestPath(netCostMatrix, source, dest
 % It returns 
 % [shortestPaths]: the list of K shortest paths (in cell array 1 x K) and 
 % [totalCosts]   : costs of the K shortest paths (in array 1 x K)
+% Taken from matlab exchange
 if source > size(netCostMatrix,1) || destination > size(netCostMatrix,1)
     warning('The source or destination node are not part of netCostMatrix');
     shortestPaths=[];
