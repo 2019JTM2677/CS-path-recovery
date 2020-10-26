@@ -1,3 +1,4 @@
+% Function for converting path=[2,1,3,4] to x=[1 0 0..](Ex1)
 function [path_arr] = path_array(path,E,n)
     path_arr = zeros(E,1);Ap = zeros(n-1,n-1);
     for i=1:n-1
