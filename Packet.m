@@ -1,3 +1,4 @@
+% Class for packet
 classdef Packet
    properties
       pkt_id {}
