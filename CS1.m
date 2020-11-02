@@ -25,11 +25,6 @@ text(x+dx, y+dy, c);
 Adj_mat = squareform(pdist(points,'euclidean'));
 G = graph(Adj_mat);
 
-%plot(G,'EdgeLabel',G.Edges.Weight);
-%p=plot(G);
-%highlight(p,T)
-%plot(T,'EdgeLabel',T.Edges.Weight);
-
 [T,pred] = minspantree(G); % Form MST using graph G
 maxweight = max(T.Edges.Weight); % Max edge weight of MST
 reach_mat = Adj_mat; 
