@@ -8,7 +8,7 @@ l = 100; b = 100; %length breadth
 % Node distribution
 points = [];
 for i=1:n
-points = [points; [randi(l,1,1) randi(b,1,1)]];
+    points = [points; [randi(l,1,1) randi(b,1,1)]];
 end
 
 %% Distribution Plot
@@ -39,27 +39,28 @@ connect_G = graph(reach_mat);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Simulation Parameters
-E = (n-1)^2; % Total no of directed edges
-EE = n^2;    % Modified for additional constraint
+
+E = (n-1)^2;       % Total no of directed edges
+EE = n^2;          % Modified for additional constraint
 hop_len = [4 5 6]; % Required hop length(to be used later)
 h = hop_len(1);    % hop length chosen
 %quant_bits = [2 6]; 
-mu=0;sigma=5; %gaussian parameters
-range=10;
-error_threshold = 10; % Threshold on error
-no_of_pkts = 1000; % Total no of pkts txed
+mu = 0; sigma = 5;range = 10; % gaussian parameters
+
+error_threshold = 100; % Threshold on error
+no_of_pkts = 10^5;     % Total no of pkts txed
 error_count = 0;
 pkt_count = 0;
 
-mm = 2*hop_len(1); 
-m = []; % form array for various values of no of rows of matrix A(m,n) 
+mm = 2*h; 
+m = [];            % Array for various values of no of rows of matrix A(m,n) 
 for ii=1:6
-    m=[m mm+(ii-2)*mm/2];
+    m = [m mm+(ii-2)*mm/2];
 end
 
-% Finding optimal path with required hop length
+% Find optimal path with required hop length 'h'
 
-% Define n nodes 
+% Define n nodes with 'class node'
 nodes=[]; nodesE=[];  % All varE used for additional constraint
 for i= 1:n
     nodes = [nodes node(i,[],reach_mat(i,:))];
@@ -70,18 +71,18 @@ end
 dest = nodes(n);
 fprintf("Destination node: %d",dest.Node_id);
 
-reach_mat1= reach_mat;
+reach_mat1 = reach_mat;    %adjacency matrix
 reach_mat1(reach_mat1 == 0) = inf;
 path=[];
-[path,src] = find_path(reach_mat1,nodes,h);
+[path,src] = find_path(reach_mat1,nodes,h);  %Func to get optimal path like [2,3,1,4]
 if isempty(path)
-fprintf('No path available\n\n');
+    fprintf('No path available\n\n');
 %CS1();
 else
-fprintf('Path choosen:');disp(path) 
+    fprintf('Path choosen:');disp(path) 
 end
 
-% Path array similar to x (y=Ax) for verify
+% Path array in terms of 1/0 = edges used/unused
 Path_arr = path_array1(path,EE,n);
 Path_arrE = path_array1(path,EE,n);
 fprintf("path array:");
@@ -92,8 +93,10 @@ disp(Path_arr')
 
 for m_index =1: length(m)
     error_count = 0;
+    error_count_OMP=0;
     %error_rate(qBit,m_index) = 0;
     error_rate(m_index) = 0;
+    error_rate_OMP(m_index) = 0;
     pkt_count = 0;
     for i=1:no_of_pkts
 
@@ -127,9 +130,11 @@ for m_index =1: length(m)
         b = pkt.provenance;
         %bE = pktE.provenance;
         %fprintf("Final provenance\n");disp(b)
+        
+        % Recovery using OMP
+        recovered_x_OMP = OMP(h,b,Ar);
 
-        % Recovery
-        %e = 100;% 0.001;
+        % Recovery using CVX
         cvx_clear
         cvx_begin quiet
             cvx_precision default
@@ -161,6 +166,14 @@ for m_index =1: length(m)
         else
             error_count = error_count+1; %Increment if path recovered is different from path travelled
         end
+        
+        if recovered_x_OMP == Path_arr
+            %fprintf("Path matched")
+            %sprintf('\n');
+        else
+            error_count_OMP = error_count_OMP +1; %Increment if path recovered is different from path travelled
+        end
+        
         if error_count == error_threshold % when threshold reached
             %error_rate(qBit,m_index) = error_count/pkt_no;
             %fprintf("Error Rate:%f",error_rate(qBit,m_index));
@@ -170,6 +183,7 @@ for m_index =1: length(m)
     end
     %error_rate(qBit,m_index) = error_count/pkt_count;
     error_rate(m_index) = error_count/pkt_count;
+    error_rate_OMP(m_index) = error_count_OMP/pkt_count;
     %fprintf("Error Rate:%f for size %d",error_rate(qBit,m_index),quant_bits(qBit)*m(m_index));
     fprintf("Error Rate:%f for column size %d\n",error_rate(m_index),m(m_index));
 end
@@ -180,7 +194,7 @@ prov_size = 16*m;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %Code for additional constraints
-
+%{ Uncomment only for solving with path constraint
 for m_index =1: length(m)
     error_countE = 0;
     %error_rate(qBit,m_index) = 0;
@@ -280,21 +294,20 @@ for m_index =1: length(m)
     fprintf("Error Rate w constraint:%f for column size %d\n",error_rateE(m_index),m(m_index));
 end
 
-
+%}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
 
 %plot(prov_size,error_rate);
 figure(1)
-% semilogy(prov_size(1,:),error_rate(1,:), 'mo-', 'LineWidth', 2);
-semilogy(m,error_rate, 'mo-', 'LineWidth', 2);
+semilogy(m,error_rate, 'mo-', 'LineWidth', 2);  % With cvx
 hold on
-semilogy(m,error_rateE, 'b+-', 'LineWidth', 2);
-%semilogy(prov_size,error_rate(2,:), 'b+-', 'LineWidth', 2);
+%semilogy(m,error_rateE, 'b+-', 'LineWidth', 2);
+semilogy(m,error_rate_OMP, 'b+-', 'LineWidth', 2);  % with OMP
 axis([0 120 0 1]);
 grid on
-%legend('Without', 'with additional constraint');
+legend('CVX', 'OMP');
 title('Error rate vs provenance size');
 xlabel('Column size');
 ylabel('Error rate')
