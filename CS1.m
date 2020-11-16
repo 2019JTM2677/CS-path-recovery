@@ -194,7 +194,8 @@ prov_size = 16*m;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %Code for additional constraints
-%{ Uncomment only for solving with path constraint
+%{ 
+%Uncomment only for solving with path constraint
 for m_index =1: length(m)
     error_countE = 0;
     %error_rate(qBit,m_index) = 0;
