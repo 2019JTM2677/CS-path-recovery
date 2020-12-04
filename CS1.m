@@ -2,13 +2,13 @@
 %function []=CS1()
     
 clc;clear;
-n = 7; % no. of nodes
+n = 5; % no. of nodes
 l = 100; b = 100; %length breadth
 
 % Node distribution
 points = [];
 for i=1:n
-    points = [points; [randi(l,1,1) randi(b,1,1)]];
+points = [points; [randi(l,1,1) randi(b,1,1)]];
 end
 
 %% Distribution Plot
@@ -25,6 +25,11 @@ text(x+dx, y+dy, c);
 Adj_mat = squareform(pdist(points,'euclidean'));
 G = graph(Adj_mat);
 
+%plot(G,'EdgeLabel',G.Edges.Weight);
+%p=plot(G);
+%highlight(p,T)
+%plot(T,'EdgeLabel',T.Edges.Weight);
+
 [T,pred] = minspantree(G); % Form MST using graph G
 maxweight = max(T.Edges.Weight); % Max edge weight of MST
 reach_mat = Adj_mat; 
@@ -39,50 +44,50 @@ connect_G = graph(reach_mat);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Simulation Parameters
-
-E = (n-1)^2;       % Total no of directed edges
-EE = n^2;          % Modified for additional constraint
+E = (n-1)^2; % Total no of directed edges
+EE = n^2;    % Modified for additional constraint
 hop_len = [4 5 6]; % Required hop length(to be used later)
 h = hop_len(1);    % hop length chosen
 %quant_bits = [2 6]; 
-mu = 0; sigma = 5;range = 10; % gaussian parameters
-
-error_threshold = 100; % Threshold on error
-no_of_pkts = 10^5;     % Total no of pkts txed
+mu=0;sigma=5; %gaussian parameters
+range=10;
+error_threshold = 500; % Threshold on error
+no_of_pkts = 3000 ;% Total no of pkts txed
 error_count = 0;
+error_count_OMP = 0;
 pkt_count = 0;
 
 mm = 2*h; 
-m = [];            % Array for various values of no of rows of matrix A(m,n) 
+m = []; % form array for various values of no of rows of matrix A(m,n) 
 for ii=1:6
-    m = [m mm+(ii-2)*mm/2];
+    m=[m mm+(ii-2)*mm/2];
 end
 
-% Find optimal path with required hop length 'h'
+% Finding optimal path with required hop length
 
-% Define n nodes with 'class node'
-nodes=[]; nodesE=[];  % All varE used for additional constraint
+% Define n nodes 
+nodes=[]; %nodesE=[];  % All varE used for additional constraint
 for i= 1:n
     nodes = [nodes node(i,[],reach_mat(i,:))];
-    nodesE = [nodesE node(i,[],reach_mat(i,:))];
+    %nodesE = [nodesE node(i,[],reach_mat(i,:))];
 end
 
 % Destination
 dest = nodes(n);
 fprintf("Destination node: %d",dest.Node_id);
 
-reach_mat1 = reach_mat;    %adjacency matrix
+reach_mat1= reach_mat;
 reach_mat1(reach_mat1 == 0) = inf;
 path=[];
-[path,src] = find_path(reach_mat1,nodes,h);  %Func to get optimal path like [2,3,1,4]
+[path,src] = find_path(reach_mat1,nodes,h);
 if isempty(path)
-    fprintf('No path available\n\n');
+fprintf('No path available\n\n');
 %CS1();
 else
-    fprintf('Path choosen:');disp(path) 
+fprintf('Path choosen:');disp(path) 
 end
 
-% Path array in terms of 1/0 = edges used/unused
+% Path array similar to x (y=Ax) for verify
 Path_arr = path_array1(path,EE,n);
 Path_arrE = path_array1(path,EE,n);
 fprintf("path array:");
@@ -111,16 +116,16 @@ for m_index =1: length(m)
         Edge_id = reshape(Ar,[m(m_index),EE/n,n]);
         %Edge_idE = reshape(ArE,[m(m_index),EE/n,n]);
         pkt_count = pkt_count +1;
-        for i= 1:n
-            if i==n
+        for ni= 1:n
+            if ni==n
                 %edge=Ar;
                 %edgeE=ArE;
-                edge=Edge_id(:,:,i);
+                edge=Edge_id(:,:,ni);
             else
-                edge=Edge_id(:,:,i);
+                edge=Edge_id(:,:,ni);
                 %edgeE= Edge_idE(:,:,i);
             end
-            nodes(i).Edge_id = edge;
+            nodes(ni).Edge_id = edge;
             %nodesE(i).Edge_id = edgeE;
         end
 
@@ -132,9 +137,28 @@ for m_index =1: length(m)
         %fprintf("Final provenance\n");disp(b)
         
         % Recovery using OMP
-        recovered_x_OMP = OMP(h,b,Ar);
-
+        x_OMP = OMP(h,b,Ar);
+       %{
+        for k=1:length(x_OMP)
+            if x_OMP(k)<=0.001
+                rec_x_OMP(k)=0;
+            else
+               rec_x_OMP(k)=1;
+            end
+       end
+       %}
+       rec_x_OMP = uint8(x_OMP);
+       if rec_x_OMP == Path_arr
+        %    fprintf("Path matched\n")
+        %    flag_OMP = 1;
+         %   %sprintf('\n');
+       else
+           error_count_OMP = error_count_OMP +1; % Increment count
+          %  flag_OMP=0;
+       end
+        
         % Recovery using CVX
+        %e = 100;% 0.001;
         cvx_clear
         cvx_begin quiet
             cvx_precision default
@@ -147,7 +171,7 @@ for m_index =1: length(m)
                 %norm( Ar * x - b) <= e;
         cvx_end
 
-
+        %{
         for k=1:length(x)
             if x(k)<=0.001
                 rec_x(k)=0;
@@ -155,26 +179,23 @@ for m_index =1: length(m)
                rec_x(k)=1;
             end
         end
-        recovered_x = rec_x';
+        %}
+        rec_x = uint8(x);
         %fprintf("Path recovered:")
         %disp(recovered_x')
         %newline
 
-        if recovered_x == Path_arr
+        if rec_x == Path_arr
             %fprintf("Path matched")
             %sprintf('\n');
         else
             error_count = error_count+1; %Increment if path recovered is different from path travelled
         end
         
-        if recovered_x_OMP == Path_arr
-            %fprintf("Path matched")
-            %sprintf('\n');
-        else
-            error_count_OMP = error_count_OMP +1; %Increment if path recovered is different from path travelled
-        end
         
-        if error_count == error_threshold % when threshold reached
+        
+        
+        if error_count == error_threshold% when threshold reached
             %error_rate(qBit,m_index) = error_count/pkt_no;
             %fprintf("Error Rate:%f",error_rate(qBit,m_index));
             break
@@ -193,9 +214,7 @@ prov_size = 16*m;
 % end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%Code for additional constraints
 %{ 
-%Uncomment only for solving with path constraint
 for m_index =1: length(m)
     error_countE = 0;
     %error_rate(qBit,m_index) = 0;
@@ -299,18 +318,19 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
-
+%%
 %plot(prov_size,error_rate);
 figure(1)
-semilogy(m,error_rate, 'mo-', 'LineWidth', 2);  % With cvx
+% semilogy(prov_size(1,:),error_rate(1,:), 'mo-', 'LineWidth', 2);
+semilogy(m,error_rate, 'mo-', 'LineWidth', 2);
 hold on
-%semilogy(m,error_rateE, 'b+-', 'LineWidth', 2);
-semilogy(m,error_rate_OMP, 'b+-', 'LineWidth', 2);  % with OMP
+semilogy(m,error_rate_OMP, 'b+-', 'LineWidth', 2);
+%semilogy(prov_size,error_rate(2,:), 'b+-', 'LineWidth', 2);
 axis([0 120 0 1]);
 grid on
 legend('CVX', 'OMP');
 title('Error rate vs provenance size');
-xlabel('Column size');
-ylabel('Error rate')
-% hold off
+xlabel('Column size, m');
+ylabel('Reconstruction Error rate');
+hold off
 %end
