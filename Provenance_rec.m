@@ -1,6 +1,6 @@
 % CS based provenance recovery method on a network of n nodes and h hops
 % Comparing SE and DE
-%function []=CS1()
+%function []=CS1()  %Run the program again if path is not assigned
     
 clc;clear;
 n = 7; % no. of nodes
@@ -79,8 +79,8 @@ Path_arr = path_array1(path,EE,n);
 Path_arr_de = path_array_de(path,DE,n);
 %fprintf("path array:");
 %disp(Path_arr')
-fprintf("path array1:");
-disp(Path_arr_de')
+%fprintf("path array1:");
+%disp(Path_arr_de')
 
 for m_index =1: length(m)
     error_count = 0;
