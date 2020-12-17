@@ -23,8 +23,13 @@ for J = 1 : K
     %Residue Update
     %w (:,J) = A (:,kk (J)) ;    % Choosing column of A for basis matrix
     B = [B A(:,kk(J))];          % Basis matrix
-    B_mod = inv(B'*B);
-    x_cap = B_mod*B'*y  ;         % x^ in each iteration
+    %fprintf("matrix is:")
+    %disp(B'*B);
+    %fprintf("\n");
+    %B_mod = inv(B'*B);
+    B_mod = B'*B;
+    y_mod = B'*y;
+    x_cap = B_mod\y_mod;%B'*y  ;         % x^ in each iteration
     Residue(:,J) = y - B*x_cap;  % residue 
     
 end
