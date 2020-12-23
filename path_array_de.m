@@ -10,8 +10,8 @@ function [path_arr] = path_array_de(path,E,n)
             next_node = path(j+1);
             
             if flag
-                fprintf("Embedding nodes")
-                disp(curr_node);
+                %fprintf("Embedding nodes")
+                %disp(curr_node);
                 if prev_node < curr_node
                     strt = 1+(prev_node - 1)*(n-2);
                 elseif prev_node > curr_node
@@ -27,7 +27,7 @@ function [path_arr] = path_array_de(path,E,n)
                 end
                 final_index = strt + index -1;
                 Ap(final_index,curr_node) = 1;
-                disp(Ap)
+                %disp(Ap)
                 if(rem(length(path),2)==0)
                     if path(j+2)==n
                         break
