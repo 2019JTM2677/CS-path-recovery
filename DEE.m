@@ -13,7 +13,7 @@ function []= DEE(path,n)
     mu = 0; sigma = 5;  % gaussian parameters
 
     error_threshold = 100; % Error rate= error_threshold/ no_of_pkts
-    no_of_pkts = 1000 ;% Total no of pkts txed
+    no_of_pkts = 10^5 ; % Total no of pkts txed
 
     mm = 2*h; 
     m = []; % form array for various values of no of rows of matrix A(m,n) 
@@ -73,28 +73,40 @@ function []= DEE(path,n)
             b_de = pkt_de.provenance;
             %fprintf("Final provenance\n");disp(b_de)
 
-           % Recovery using OMP double edge
-           if rem(length(path),2)==0    
-               h_omp = length(path)/2 -1;
-           else
-               h_omp = floor(length(path)/2);
-           end
+            % Recovery using OMP double edge
+            if rem(length(path),2)==0    
+                h_omp = length(path)/2 -1;
+            else
+                h_omp = floor(length(path)/2);
+            end
            
-           x_Ode = OMP(h_omp,b_de,Ar_de);
-           rec_x_Ode = uint8(x_Ode);
+            x_Ode = OMP(h_omp,b_de,Ar_de);
+            for k=1:length(x_Ode)
+                if abs(x_Ode(k))<=0.001
+                    rec_x_Ode(k)=0;
+                else
+                   rec_x_Ode(k)=1;
+                end
+            end
            
-           if rec_x_Ode == Path_arr_de
+            if rec_x_Ode' == Path_arr_de
                %fprintf("Path matched")
-           else
+            else
                error_count_Ode = error_count_Ode +1; % Increment count
-           end
+            end
 
 
             % Recovery using CVX double edge
             x_de = cvx_solver(DE,b_de,Ar_de);
-            rec_x_de = uint8(x_de);
+            for k=1:length(x_de)
+                if abs(x_de(k))<=0.001
+                    rec_x_de(k)=0;
+                else
+                   rec_x_de(k)=1;
+                end
+            end
 
-            if rec_x_de == Path_arr_de
+            if rec_x_de' == Path_arr_de
                 %fprintf("Path matched\n")
             else
                 error_count_de = error_count_de +1; %Increment if path recovered is different from path travelled
@@ -115,13 +127,13 @@ function []= DEE(path,n)
     figure(1)
     %a1=semilogy(m,error_rate, 'm+-', 'LineWidth', 2);
     %a2=semilogy(m,error_rate_OMP, 'bd-', 'LineWidth', 2);
-    a3=semilogy(m,error_rate_de, 'gd-', 'LineWidth', 2);
+    a3=semilogy(m,error_rate_de, 'go-', 'LineWidth', 2);
     hold on
-    %a4=semilogy(m,error_rate_Ode, 'ro-', 'LineWidth', 2);
+    a4=semilogy(m,error_rate_Ode, 'ro-', 'LineWidth', 2);
     axis([0 120 0 1]);
     grid on
     %M1="n=5,h=4"; M2="n=9,h=4";
-    legend('SE CVX','DE CVX');
+    legend('SE CVX','SE OMP','DE CVX','DE OMP');
     %legend([a1,a2], [M1, M2]);
     title('Error rate vs provenance size');
     xlabel('Column size, m');

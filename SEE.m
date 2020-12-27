@@ -1,9 +1,14 @@
 % Single edge embedding on a network of n nodes and h hops
 %function []= SEE()
     clc;clear;
-    n = 12; % no. of nodes
+    n = 5; % no. of nodes
+    hop_len = [4 5 6]; % Required hop length
+    h= hop_len(1); % choose hop length according to path
+    % Define path to be travelled
+    path = [1 3 2 4 n];
     
-    reach_mat = ones(n) - diag(ones([1,n]));
+    
+    reach_mat = ones(n) - diag(ones([1,n])); %adjacency matrix for complete graph
     connect_G = graph(reach_mat~=0);
     %figure(2);
     %plot(connect_G);
@@ -12,12 +17,11 @@
     %% Simulation
     % Simulation Parameters
     E = (n-1)^2; % Total no of directed edges
-    hop_len = [4 5 6]; % Required hop length
-    mu=0;sigma=5;range=12; %gaussian parameters
+    mu=0;sigma=5; %gaussian parameters
     error_threshold = 100; % Error Rate = error_threshold/no_of_pkts
-    no_of_pkts = 1000; % Total no of pkts txed
+    no_of_pkts = 10^5; % Total no of pkts txed
     
-    h= hop_len(1); % choose hop length according to path
+    
     mm = 2*h; 
     m=[]; % form array for various values of no of rows of matrix A(m,n) 
     for ii=1:7
@@ -34,8 +38,6 @@
     dest = nodes(n);
     %fprintf("Destination node: %d",dest.Node_id);
     
-    % Define path to be travelled
-    path = [1 3 2 4 12];
     src = nodes(path(1));
     fprintf('Path choosen:');disp(path) 
     
@@ -78,9 +80,15 @@
 
             % Recovery using OMP
             x_OMP = OMP(h,b,Ar);
-
-            rec_x_OMP = uint8(x_OMP); %typecast to unsigned int
-            if rec_x_OMP == Path_arr
+            for k=1:length(x_OMP)
+                if abs(x_OMP(k))<=0.001
+                    rec_x_OMP(k)=0;
+                else
+                   rec_x_OMP(k)=1;
+                end
+            end
+            
+            if rec_x_OMP' == Path_arr
             %    fprintf("Path matched\n")
             else
                error_count_OMP = error_count_OMP +1; % Increment count
@@ -88,9 +96,15 @@
 
             % Recovery using CVX
             x = cvx_solver(E,b,Ar);
-            recovered_x = uint8(x);               
+            for k=1:length(x)
+                if abs(x(k))<=0.001
+                    rec_x(k)=0;
+                else
+                   rec_x(k)=1;
+                end
+            end
             % Comparing recovered path wth original path
-            if recovered_x == Path_arr
+            if rec_x' == Path_arr
                 %fprintf("Path matched\n")
             else
                 error_count = error_count+1; %Increment if path recovered is different from path travelled
@@ -108,9 +122,9 @@
     
     
     figure(1)
-    semilogy(m,error_rate, 'md-', 'LineWidth', 2);
+    semilogy(m,error_rate, 'mo-', 'LineWidth', 2);
     hold on
-    %semilogy(m,error_rate_OMP, 'b+-', 'LineWidth', 2);
+    semilogy(m,error_rate_OMP, 'bo-', 'LineWidth', 2);
     axis([0 120 0 1]);
     grid on
     %legend('SE CVX', 'SE OMP');
