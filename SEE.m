@@ -17,22 +17,22 @@
     %% Simulation
     % Simulation Parameters
     E = (n-1)^2; % Total no of directed edges
-    mu=0;sigma=5; %gaussian parameters
+    mu=0;sigma=10; %gaussian parameters
     error_threshold = 100; % Error Rate = error_threshold/no_of_pkts
-    no_of_pkts = 10^5; % Total no of pkts txed
+    no_of_pkts = 10^3; % Total no of pkts txed
     
     
     mm = 2*h; 
     m=[]; % form array for various values of no of rows of matrix A(m,n) 
-    for ii=1:7
-        m=[m mm+(ii-2)*mm/2];
+    for ii=1:5
+        m =[m mm+(ii-2)*mm/2];
     end
     
     % Define n nodes 
     nodes=[]; 
     for i= 1:n
         nodes=[nodes node(i,[],reach_mat(i,:))];
-    end
+    end 
     
     % Destination
     dest = nodes(n);
@@ -84,7 +84,7 @@
                 if abs(x_OMP(k))<=0.001
                     rec_x_OMP(k)=0;
                 else
-                   rec_x_OMP(k)=1;
+                    rec_x_OMP(k)=1;
                 end
             end
             
@@ -95,12 +95,21 @@
             end
 
             % Recovery using CVX
-            x = cvx_solver(E,b,Ar);
+            %x = cvx_solver(E,b,Ar);
+            
+            cvx_begin quiet
+                cvx_precision default
+                variable x(E) %binary
+                minimize( norm(x, 1 ) )
+                subject to
+                    Ar*x == b;
+            cvx_end
+            
             for k=1:length(x)
                 if abs(x(k))<=0.001
                     rec_x(k)=0;
                 else
-                   rec_x(k)=1;
+                    rec_x(k)=1;
                 end
             end
             % Comparing recovered path wth original path
@@ -122,9 +131,9 @@
     
     
     figure(1)
-    semilogy(m,error_rate, 'mo-', 'LineWidth', 2);
+    semilogy(m,error_rate, 'm+-', 'LineWidth', 2);
     hold on
-    semilogy(m,error_rate_OMP, 'bo-', 'LineWidth', 2);
+    semilogy(m,error_rate_OMP, 'b+-', 'LineWidth', 2);
     axis([0 120 0 1]);
     grid on
     %legend('SE CVX', 'SE OMP');

@@ -13,7 +13,7 @@ function []= DEE(path,n)
     mu = 0; sigma = 5;  % gaussian parameters
 
     error_threshold = 100; % Error rate= error_threshold/ no_of_pkts
-    no_of_pkts = 10^5 ; % Total no of pkts txed
+    no_of_pkts = 10^3 ; % Total no of pkts txed
 
     mm = 2*h; 
     m = []; % form array for various values of no of rows of matrix A(m,n) 
@@ -97,7 +97,14 @@ function []= DEE(path,n)
 
 
             % Recovery using CVX double edge
-            x_de = cvx_solver(DE,b_de,Ar_de);
+            %x_de = cvx_solver(DE,b_de,Ar_de);
+            cvx_begin quiet
+                cvx_precision default
+                variable x_de(DE) %binary
+                minimize( norm(x_de, 1 ) )
+                subject to
+                    Ar_de*x_de == b_de;
+            cvx_end
             for k=1:length(x_de)
                 if abs(x_de(k))<=0.001
                     rec_x_de(k)=0;
@@ -127,9 +134,9 @@ function []= DEE(path,n)
     figure(1)
     %a1=semilogy(m,error_rate, 'm+-', 'LineWidth', 2);
     %a2=semilogy(m,error_rate_OMP, 'bd-', 'LineWidth', 2);
-    a3=semilogy(m,error_rate_de, 'go-', 'LineWidth', 2);
+    a3=semilogy(m,error_rate_de, 'g+-', 'LineWidth', 2);
     hold on
-    a4=semilogy(m,error_rate_Ode, 'ro-', 'LineWidth', 2);
+    a4=semilogy(m,error_rate_Ode, 'r+-', 'LineWidth', 2);
     axis([0 120 0 1]);
     grid on
     %M1="n=5,h=4"; M2="n=9,h=4";
